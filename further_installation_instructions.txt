@@ -1,0 +1,20 @@
+#additional instructions for Linux/Unix machines (Ubuntu)
+
+apt-get install gfortran cmake #if not already installed
+
+> download lapacke 3.12.1 from the website
+
+
+tar -xvf lapack-3.12.1.tar.gz
+cd lapack-3.12.1
+mkdir build && cd build
+cmake -DBUILD_LAPACKE=ON -DCMAKE_INSTALL_PREFIX=/home/lapack ..
+make
+make install
+
+cp -r /home/lapack-3.12.1/LAPACKE/include /home/lapack/
+
+
+#in order to install openblas 
+apt-get install libopenblas-dev
+export LDFLAGS="-L/usr/lib/x86_64-linux-gnu -lopenblas"
