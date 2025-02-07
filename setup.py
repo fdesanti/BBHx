@@ -108,6 +108,8 @@ try:
     CUDA = locate_cuda()
     run_cuda_install = True
 except OSError:
+    print("Unable to locate CUDA")
+    print("Check if nvcc compiler is installed")
     run_cuda_install = False
 
 parser = argparse.ArgumentParser()
