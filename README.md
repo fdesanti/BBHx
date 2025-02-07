@@ -9,8 +9,20 @@ This package is a part of the LISA Analysis Tools environment.
 
 If you use this software please cite [arXiv:2005.01827](https://arxiv.org/abs/2005.01827), [arXiv:2111.01064](https://arxiv.org/abs/2111.01064), and the associated [Zenodo page](https://zenodo.org/record/5730688#.YaFvRkJKhTY) Please also cite any consituent parts used like the response function or waveforms. See the `citation` attribute for each class or docstring for functions for more information.
 
-## Getting Started
+## Installation
+The following instructions are to install this repo in editable mode. 
+1) First export an environmental variable to the location to the lapack library on your machine
+```
+export LAPACK_DIR=/path/to/library
+```
+e.g. export LAPACK_DIR=/opt/homebrew/Cellar/lapack/3.12.1
 
+2) simply run the [install.sh](install.sh)
+```
+bash install.sh
+```
+
+## Getting Started
 To install with pip (for CPUs only currently):
 ```
 pip install bbhx
