@@ -17,7 +17,7 @@ export LAPACK_DIR=/path/to/library
 ```
 e.g. export LAPACK_DIR=/opt/homebrew/Cellar/lapack/3.12.1
 
-2) simply run the [install.sh](install.sh)
+2) just run the [install.sh](install.sh)
 ```
 bash install.sh
 ```
