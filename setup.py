@@ -171,13 +171,31 @@ try:
 except AttributeError:
     numpy_include = numpy.get_numpy_include()
 
-if args.lapack is None:
-    lapack_include = [args.lapack_include]
-    lapack_lib = [args.lapack_lib]
+#getting lapack directories
+lapack_dir = os.environ.get("LAPACK_DIR")
 
-else:
-    lapack_include = [args.lapack + "/include"]
-    lapack_lib = [args.lapack + "/lib"]
+
+if lapack_dir is None:
+    print("\nWARNING: unable to find lapack\n")
+    print("------------------------------------------------------------\n")
+    print("LAPACK_DIR environment variable is not set. Please set it to the directory of the lapack installation.")
+    print("You can do this by running the following command in your terminal before the installation:")
+    print("export LAPACK_DIR=/path/to/lapack\n")
+    print("------------------------------------------------------------")
+    print("\n\n")
+    raise ValueError("LAPACK_DIR environment variable is not set. Please set it to the directory of the lapack installation.")
+
+
+lapack_lib = [lapack_dir + "/lib"]
+lapack_include = [lapack_dir + "/include"]
+
+# if args.lapack is None:
+#     lapack_include = [args.lapack_include]
+#     lapack_lib = [args.lapack_lib]
+
+# else:
+#     lapack_include = [args.lapack + "/include"]
+#     lapack_lib = [args.lapack + "/lib"]
 
 if args.gsl is None:
     gsl_include = [args.gsl_include]
@@ -303,19 +321,16 @@ if run_cuda_install:
 cpu_extension = dict(
     libraries=["lapacke", "lapack", "gsl", "gslcblas"],
     language="c++",
-    # This syntax is specific to this build system
-    # we're only going to use certain compiler args with nvcc
-    # and not with gcc the implementation of this trick is in
-    # customize_compiler()
+    library_dirs=lapack_lib,  # Add the LAPACK library directory
     extra_compile_args={
         "gcc": ["-std=c++11"],
-    },  # '-g'],
+    },
     include_dirs=[
         numpy_include,
         "bbhx/cutils/include",
         path_to_lisatools_cutils + "include",
         "/usr/include",
-    ],
+    ] + lapack_include,  # Optionally add the LAPACK include directory
 )
 
 pyPhenomHM_cpu_ext = Extension(
