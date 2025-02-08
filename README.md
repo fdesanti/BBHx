@@ -30,10 +30,15 @@ export CFLAGS=-I/path/to/your/gsl/include
 export LDFLAGS=-L/path/to/your/gsl/lib
 ```
 
-2) just run the [install.sh](install.sh) for an *editable* installation
+2) just run the [install.sh](install.sh) 
 ```
 bash install.sh
 ```
+or 
+```
+bash install.sh --editable
+```
+for an *editable* installation
 
 See also [further_installation_instructions.txt](further_installation_instructions.txt) for instructions on how to get
 lapack library on Linux (Ubuntu) machines

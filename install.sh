@@ -1,11 +1,18 @@
 #clear terminal
 clear
 
-#remove alredy builds
-rm -rf build
-rm -rf *.egg-info
-
+#execute prebuild script
 python scripts/prebuild.py
 
-#run the installation
-pip install -e .
+# Check for command line arguments
+if [ "$1" == "--editable" ]; then
+    #remove already present builds (if any)
+    rm -rf build
+    rm -rf *.egg-info
+
+    #run the installation
+    pip install -e .
+else
+    #run the installation
+    pip install .
+fi
