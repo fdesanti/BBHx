@@ -11,24 +11,35 @@ If you use this software please cite [arXiv:2005.01827](https://arxiv.org/abs/20
 
 ## Installation
 The following instructions are to install this repo in editable mode. 
-1) First export an environmental variable to the location to the lapack library on your machine
+
+1) First clone this repository locally
 ```
-export LAPACK_DIR=/path/to/library
+git clone https://github.com/fdesanti/BBHx.git
+cd BBHx
+```
+
+2) Then export an environmental variable pointing to the lapack library location on your machine
+```
+export LAPACK_DIR=/path/to/your/library
 ```
 e.g. export LAPACK_DIR=/opt/homebrew/Cellar/lapack/3.12.1
 
-2) just run the [install.sh](install.sh)
+Make also sure to have installed the gsl library and in case set these environmental variables
+```
+export CFLAGS=-I/path/to/your/gsl/include
+export LDFLAGS=-L/path/to/your/gsl/lib
+```
+
+2) just run the [install.sh](install.sh) for an *editable* installation
 ```
 bash install.sh
 ```
 
-## Getting Started
-To install with pip (for CPUs only currently):
-```
-pip install bbhx
-```
+See also [further_installation_instructions.txt](further_installation_instructions.txt) for instructions on how to get
+lapack library on Linux (Ubuntu) machines
 
-2) To import ``bbhx``:
+## Getting Started
+To import ``bbhx``:
 
 ```
 from bbhx.waveform import BBHWaveformFD
