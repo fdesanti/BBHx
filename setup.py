@@ -8,48 +8,32 @@ from Cython.Distutils import build_ext
 import numpy
 import argparse
 
-
 def find_in_path(name, path):
     """Find a file in a search path"""
-
-    # Adapted fom http://code.activestate.com/recipes/52224
     for dir in path.split(os.pathsep):
         binpath = pjoin(dir, name)
         if os.path.exists(binpath):
             return os.path.abspath(binpath)
     return None
 
-
 def locate_cuda():
-    """Locate the CUDA environment on the system
-
-    Returns a dict with keys 'home', 'nvcc', 'include', and 'lib64'
-    and values giving the absolute path to each directory.
-
-    Starts by looking for the CUDAHOME env variable. If not found,
-    everything is based on finding 'nvcc' in the PATH.
+    """Locate the CUDA environment on the system.
+    Returns a dict with keys 'home', 'nvcc', 'include', and 'lib64'.
     """
-
-    # First check if the CUDAHOME env variable is in use
     if "CUDAHOME" in os.environ:
         home = os.environ["CUDAHOME"]
         nvcc = pjoin(home, "bin", "nvcc")
-
     elif "CUDA_HOME" in os.environ:
         home = os.environ["CUDA_HOME"]
         nvcc = pjoin(home, "bin", "nvcc")
-
     else:
-        # Otherwise, search the PATH for NVCC
         nvcc = find_in_path("nvcc", os.environ["PATH"])
         if nvcc is None:
             raise EnvironmentError(
-                "The nvcc binary could not be "
-                "located in your $PATH. Either add it to your path, "
-                "or set $CUDAHOME"
+                "The nvcc binary could not be located in your $PATH. "
+                "Either add it to your path, or set $CUDAHOME"
             )
         home = os.path.dirname(os.path.dirname(nvcc))
-
     cudaconfig = {
         "home": home,
         "nvcc": nvcc,
@@ -58,28 +42,15 @@ def locate_cuda():
     }
     for k, v in iter(cudaconfig.items()):
         if not os.path.exists(v):
-            raise EnvironmentError(
-                "The CUDA %s path could not be " "located in %s" % (k, v)
-            )
-
+            raise EnvironmentError("The CUDA %s path could not be located in %s" % (k, v))
     return cudaconfig
 
-
 def customize_compiler_for_nvcc(self):
-
-    # track all the object files generated with cuda device code
     self.cuda_object_files = []
-
-    # Tell the compiler it can processes .cu
     self.src_extensions.append(".cu")
-
-    # Save references to the default compiler_so and _comple methods
     default_compiler_so = self.compiler_so
-    super = self._compile
-
+    super_compile = self._compile
     def _compile(obj, src, ext, cc_args, extra_postargs, pp_opts):
-        # generate a special object file that will contain linked in
-        # relocatable device code
         if src == "zzzzzzzzzzzzzzzz.cu":
             self.set_executable("compiler_so", CUDA["nvcc"])
             postargs = extra_postargs["nvcclink"]
@@ -91,19 +62,16 @@ def customize_compiler_for_nvcc(self):
             self.cuda_object_files.append(obj)
         else:
             postargs = extra_postargs["gcc"]
-        super(obj, src, ext, cc_args, postargs, pp_opts)
+        super_compile(obj, src, ext, cc_args, postargs, pp_opts)
         self.compiler_so = default_compiler_so
-
     self._compile = _compile
 
-
-# Run the customize_compiler
 class custom_build_ext(build_ext):
     def build_extensions(self):
         customize_compiler_for_nvcc(self.compiler)
         build_ext.build_extensions(self)
 
-
+# Proviamo a localizzare CUDA
 try:
     CUDA = locate_cuda()
     run_cuda_install = True
@@ -111,132 +79,83 @@ except OSError:
     print("Unable to locate CUDA")
     print("Check if nvcc compiler is installed")
     run_cuda_install = False
+run_cuda_install = False
 
 parser = argparse.ArgumentParser()
-
-parser.add_argument(
-    "--lapack_lib",
-    help="Directory of the lapack lib.",
-    default="/usr/local/opt/lapack/lib",
-)
-
-parser.add_argument(
-    "--lapack_include",
-    help="Directory of the lapack include.",
-    default="/usr/local/opt/lapack/include",
-)
-
-parser.add_argument(
-    "--lapack",
-    help="Directory of both lapack lib and include. '/include' and '/lib' will be added to the end of this string.",
-)
-
-parser.add_argument(
-    "--gsl_lib", help="Directory of the gsl lib.", default="/usr/local/opt/gsl/lib"
-)
-
-parser.add_argument(
-    "--gsl_include",
-    help="Directory of the gsl include.",
-    default="/usr/local/opt/gsl/include",
-)
-
-parser.add_argument(
-    "--gsl",
-    help="Directory of both gsl lib and include. '/include' and '/lib' will be added to the end of this string.",
-)
-
+parser.add_argument("--lapack_lib", help="Directory of the lapack lib.", default="/usr/local/opt/lapack/lib")
+parser.add_argument("--lapack_include", help="Directory of the lapack include.", default="/usr/local/opt/lapack/include")
+parser.add_argument("--lapack", help="Directory of both lapack lib and include. '/include' and '/lib' will be added to the end of this string.")
+parser.add_argument("--gsl_lib", help="Directory of the gsl lib.", default="/usr/local/opt/gsl/lib")
+parser.add_argument("--gsl_include", help="Directory of the gsl include.", default="/usr/local/opt/gsl/include")
+parser.add_argument("--gsl", help="Directory of both gsl lib and include. '/include' and '/lib' will be added to the end of this string.")
 args, unknown = parser.parse_known_args()
-
 for key in [
-    args.gsl_include,
-    args.gsl_lib,
-    args.gsl,
-    "--gsl",
-    "--gsl_include",
-    "--gsl_lib",
-    args.lapack_include,
-    args.lapack_lib,
-    args.lapack,
-    "--lapack",
-    "--lapack_lib",
-    "--lapack_include",
+    args.gsl_include, args.gsl_lib, args.gsl,
+    "--gsl", "--gsl_include", "--gsl_lib",
+    args.lapack_include, args.lapack_lib, args.lapack,
+    "--lapack", "--lapack_lib", "--lapack_include",
 ]:
     try:
         sys.argv.remove(key)
     except ValueError:
         pass
 
-# Obtain the numpy include directory. This logic works across numpy versions.
 try:
     numpy_include = numpy.get_include()
 except AttributeError:
     numpy_include = numpy.get_numpy_include()
 
-#getting lapack directories
+# Configurazione delle directory LAPACK
 lapack_dir = os.environ.get("LAPACK_DIR")
-
-
 if lapack_dir is None:
     print("\nWARNING: unable to find lapack\n")
-    print("------------------------------------------------------------\n")
-    print("LAPACK_DIR environment variable is not set. Please set it to the directory of the lapack installation.")
-    print("You can do this by running the following command in your terminal before the installation:")
-    print("export LAPACK_DIR=/path/to/lapack\n")
     print("------------------------------------------------------------")
-    print("\n\n")
+    print("LAPACK_DIR environment variable is not set. Please set it to the directory of the lapack installation.")
+    print("For example, on CentOS, you might set it to /usr")
+    print("export LAPACK_DIR=/usr")
+    print("------------------------------------------------------------\n")
     raise ValueError("LAPACK_DIR environment variable is not set. Please set it to the directory of the lapack installation.")
 
+# Determina la directory delle librerie: preferisce lib64 se esiste
+if os.path.exists(pjoin(lapack_dir, "lib64")):
+    lapack_lib = [pjoin(lapack_dir, "lib64")]
+elif os.path.exists(pjoin(lapack_dir, "lib")):
+    lapack_lib = [pjoin(lapack_dir, "lib")]
+else:
+    lapack_lib = [pjoin(lapack_dir, "lib")]
 
-lapack_lib = [lapack_dir + "/lib"]
-lapack_include = [lapack_dir + "/include"]
-
-# if args.lapack is None:
-#     lapack_include = [args.lapack_include]
-#     lapack_lib = [args.lapack_lib]
-
-# else:
-#     lapack_include = [args.lapack + "/include"]
-#     lapack_lib = [args.lapack + "/lib"]
+# Determina la directory degli header LAPACK
+if os.path.exists(pjoin(lapack_dir, "include", "lapacke", "lapacke.h")):
+    lapack_include = [pjoin(lapack_dir, "include", "lapacke")]
+elif os.path.exists(pjoin(lapack_dir, "include", "lapacke.h")):
+    lapack_include = [pjoin(lapack_dir, "include")]
+elif os.path.exists(pjoin(lapack_dir, "lapacke.h")):
+    lapack_include = [lapack_dir]
+else:
+    lapack_include = [pjoin(lapack_dir, "include")]
 
 if args.gsl is None:
     gsl_include = [args.gsl_include]
     gsl_lib = [args.gsl_lib]
-
 else:
     gsl_include = [args.gsl + "/include"]
     gsl_lib = [args.gsl + "/lib"]
 
 import lisatools
-
 path_to_lisatools = lisatools.__file__.split("__init__.py")[0]
 path_to_lisatools_cutils = path_to_lisatools + "cutils/"
 
-# try:
-#     exec(open("scripts/prebuild.py", "r").read())
-# except FileNotFoundError:
-#     import warnings
-
-#     warnings.warn(
-#         "Trying to executre prebuild.py inside setup script, but getting FileNotFoundError. Assuming user will run scripts/prebuild.py manually."
-#     )
-# if installing for CUDA, build Cython extensions for gpu modules
+# Costruzione delle estensioni
 if run_cuda_install:
     gpu_extension = dict(
         libraries=["cudart", "cublas", "cusparse", "gsl", "gslcblas"],
         library_dirs=[CUDA["lib64"]] + gsl_lib,
         runtime_library_dirs=[CUDA["lib64"]],
         language="c++",
-        # This syntax is specific to this build system
-        # we're only going to use certain compiler args with nvcc
-        # and not with gcc the implementation of this trick is in
-        # customize_compiler()
         extra_compile_args={
-            "gcc": ["-std=c++11"],  # '-g'],
+            "gcc": ["-std=c++11", "-fpermissive"],
             "nvcc": [
                 "-arch=sm_80",
-                # "-gencode=arch=compute_50,code=sm_50",
-                # "-gencode=arch=compute_52,code=sm_52",
                 "-gencode=arch=compute_60,code=sm_60",
                 "-gencode=arch=compute_61,code=sm_61",
                 "-gencode=arch=compute_70,code=sm_70",
@@ -246,11 +165,7 @@ if run_cuda_install:
                 "-c",
                 "--compiler-options",
                 "'-fPIC'",
-                # "-G",
-                # "-g",
-                # "-O0",
-                # "-lineinfo",
-            ],  # for debugging
+            ],
         },
         include_dirs=[
             numpy_include,
@@ -277,12 +192,8 @@ if run_cuda_install:
         library_dirs=[CUDA["lib64"]],
         runtime_library_dirs=[CUDA["lib64"]],
         language="c++",
-        # This syntax is specific to this build system
-        # we're only going to use certain compiler args with nvcc
-        # and not with gcc the implementation of this trick is in
-        # customize_compiler()
         extra_compile_args={
-            "gcc": ["-std=c++11"],
+            "gcc": ["-std=c++11", "-fpermissive"],
             "nvcc": ["-arch=sm_80", "-rdc=true", "--compiler-options", "'-fPIC'"],
             "nvcclink": [
                 "-arch=sm_80",
@@ -318,12 +229,10 @@ if run_cuda_install:
         **gpu_extension,
     )
 
-    # gpu_extensions.append(Extension(extension_name, **temp_dict))
-
 cpu_extension = dict(
     libraries=["lapacke", "lapack", "gsl", "gslcblas"],
     language="c++",
-    library_dirs=lapack_lib,  # Add the LAPACK library directory
+    library_dirs=lapack_lib,
     extra_compile_args={
         "gcc": ["-std=c++11"],
     },
@@ -332,7 +241,7 @@ cpu_extension = dict(
         "bbhx/cutils/include",
         path_to_lisatools_cutils + "include",
         "/usr/include",
-    ] + lapack_include,  # Optionally add the LAPACK include directory
+    ] + lapack_include,
 )
 
 pyPhenomHM_cpu_ext = Extension(
@@ -349,13 +258,11 @@ pyFDResponse_cpu_ext = Extension(
     ],
     **cpu_extension,
 )
-
 pyInterpolate_cpu_ext = Extension(
     "bbhx.cutils.pyInterpolate_cpu",
     sources=["bbhx/cutils/src/Interpolate.cpp", "bbhx/cutils/src/interpolate_cpu.pyx"],
     **cpu_extension,
 )
-
 pyWaveformBuild_cpu_ext = Extension(
     "bbhx.cutils.pyWaveformBuild_cpu",
     sources=[
@@ -364,13 +271,11 @@ pyWaveformBuild_cpu_ext = Extension(
     ],
     **cpu_extension,
 )
-
 pyLikelihood_cpu_ext = Extension(
     "bbhx.cutils.pyLikelihood_cpu",
     sources=["bbhx/cutils/src/Likelihood.cpp", "bbhx/cutils/src/likelihood_cpu.pyx"],
     **cpu_extension,
 )
-
 
 extensions = [
     pyPhenomHM_cpu_ext,
@@ -379,7 +284,6 @@ extensions = [
     pyWaveformBuild_cpu_ext,
     pyLikelihood_cpu_ext,
 ]
-
 if run_cuda_install:
     extensions = [
         pyPhenomHM_ext,
@@ -403,9 +307,7 @@ setup(
         "bbhx.cutils.src",
         "bbhx.cutils.include",
     ],
-    # Inject our custom trigger
     cmdclass={"build_ext": custom_build_ext},
-    # Since the package has c code, the egg cannot be zipped
     zip_safe=False,
     version="1.1.11",
     python_requires=">=3.6",
