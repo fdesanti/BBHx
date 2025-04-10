@@ -79,7 +79,7 @@ except OSError:
     print("Unable to locate CUDA")
     print("Check if nvcc compiler is installed")
     run_cuda_install = False
-run_cuda_install = False
+#run_cuda_install = False
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--lapack_lib", help="Directory of the lapack lib.", default="/usr/local/opt/lapack/lib")
