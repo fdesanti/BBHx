@@ -12,6 +12,40 @@
 #include <complex>
 #include <limits>
 
+// Inline wrappers for math functions. For CUDA device compilation, use the device‐friendly versions.
+#ifdef __CUDACC__
+__host__ __device__ inline float my_copysign(float x, float y) { return copysignf(x, y); }
+__host__ __device__ inline double my_copysign(double x, double y) { return copysign(x, y); }
+
+__host__ __device__ inline float my_fmax(float x, float y) { return fmaxf(x, y); }
+__host__ __device__ inline double my_fmax(double x, double y) { return fmax(x, y); }
+
+__host__ __device__ inline float my_scalbn(float x, int n) { return scalbnf(x, n); }
+__host__ __device__ inline double my_scalbn(double x, int n) { return scalbn(x, n); }
+
+__host__ __device__ inline float my_logb(float x) { return logbf(x); }
+__host__ __device__ inline double my_logb(double x) { return logb(x); }
+
+// New wrapper for hypot. In device code, we implement it as sqrt(x*x + y*y).
+__host__ __device__ inline float my_hypot(float x, float y) { return sqrtf(x * x + y * y); }
+__host__ __device__ inline double my_hypot(double x, double y) { return sqrt(x * x + y * y); }
+#else
+inline float my_copysign(float x, float y) { return std::copysign(x, y); }
+inline double my_copysign(double x, double y) { return std::copysign(x, y); }
+
+inline float my_fmax(float x, float y) { return std::fmax(x, y); }
+inline double my_fmax(double x, double y) { return std::fmax(x, y); }
+
+inline float my_scalbn(float x, int n) { return std::scalbn(x, n); }
+inline double my_scalbn(double x, int n) { return std::scalbn(x, n); }
+
+inline float my_logb(float x) { return std::logb(x); }
+inline double my_logb(double x) { return std::logb(x); }
+
+inline float my_hypot(float x, float y) { return std::hypot(x, y); }
+inline double my_hypot(double x, double y) { return std::hypot(x, y); }
+#endif
+
 namespace gcmplx {
 
 template<class _Tp> class complex;
@@ -254,35 +288,35 @@ complex<_Tp> operator*(const complex<_Tp>& __z, const complex<_Tp>& __w)
         bool __recalc = false;
         if (std::isinf(__a) || std::isinf(__b))
         {
-            __a = std::copysign(std::isinf(__a) ? _Tp(1) : _Tp(0), __a);
-            __b = std::copysign(std::isinf(__b) ? _Tp(1) : _Tp(0), __b);
+            __a = my_copysign(std::isinf(__a) ? _Tp(1) : _Tp(0), __a);
+            __b = my_copysign(std::isinf(__b) ? _Tp(1) : _Tp(0), __b);
             if (std::isnan(__c))
-                __c = std::copysign(_Tp(0), __c);
+                __c = my_copysign(_Tp(0), __c);
             if (std::isnan(__d))
-                __d = std::copysign(_Tp(0), __d);
+                __d = my_copysign(_Tp(0), __d);
             __recalc = true;
         }
         if (std::isinf(__c) || std::isinf(__d))
         {
-            __c = std::copysign(std::isinf(__c) ? _Tp(1) : _Tp(0), __c);
-            __d = std::copysign(std::isinf(__d) ? _Tp(1) : _Tp(0), __d);
+            __c = my_copysign(std::isinf(__c) ? _Tp(1) : _Tp(0), __c);
+            __d = my_copysign(std::isinf(__d) ? _Tp(1) : _Tp(0), __d);
             if (std::isnan(__a))
-                __a = std::copysign(_Tp(0), __a);
+                __a = my_copysign(_Tp(0), __a);
             if (std::isnan(__b))
-                __b = std::copysign(_Tp(0), __b);
+                __b = my_copysign(_Tp(0), __b);
             __recalc = true;
         }
         if (!__recalc && (std::isinf(__ac) || std::isinf(__bd) ||
                           std::isinf(__ad) || std::isinf(__bc)))
         {
             if (std::isnan(__a))
-                __a = std::copysign(_Tp(0), __a);
+                __a = my_copysign(_Tp(0), __a);
             if (std::isnan(__b))
-                __b = std::copysign(_Tp(0), __b);
+                __b = my_copysign(_Tp(0), __b);
             if (std::isnan(__c))
-                __c = std::copysign(_Tp(0), __c);
+                __c = my_copysign(_Tp(0), __c);
             if (std::isnan(__d))
-                __d = std::copysign(_Tp(0), __d);
+                __d = my_copysign(_Tp(0), __d);
             __recalc = true;
         }
         if (__recalc)
@@ -321,34 +355,34 @@ complex<_Tp> operator/(const complex<_Tp>& __z, const complex<_Tp>& __w)
     _Tp __b = __z.imag();
     _Tp __c = __w.real();
     _Tp __d = __w.imag();
-    _Tp __logbw = std::logb(std::fmax(std::fabs(__c), std::fabs(__d)));
+    _Tp __logbw = my_logb(my_fmax(std::fabs(__c), std::fabs(__d)));
     if (std::isfinite(__logbw))
     {
         __ilogbw = static_cast<int>(__logbw);
-        __c = std::scalbn(__c, -__ilogbw);
-        __d = std::scalbn(__d, -__ilogbw);
+        __c = my_scalbn(__c, -__ilogbw);
+        __d = my_scalbn(__d, -__ilogbw);
     }
     _Tp __denom = __c * __c + __d * __d;
-    _Tp __x = std::scalbn((__a * __c + __b * __d) / __denom, -__ilogbw);
-    _Tp __y = std::scalbn((__b * __c - __a * __d) / __denom, -__ilogbw);
+    _Tp __x = my_scalbn((__a * __c + __b * __d) / __denom, -__ilogbw);
+    _Tp __y = my_scalbn((__b * __c - __a * __d) / __denom, -__ilogbw);
     if (std::isnan(__x) && std::isnan(__y))
     {
         if ((__denom == _Tp(0)) && (!std::isnan(__a) || !std::isnan(__b)))
         {
-            __x = std::copysign(_Tp(INFINITY), __c) * __a;
-            __y = std::copysign(_Tp(INFINITY), __c) * __b;
+            __x = my_copysign(_Tp(INFINITY), __c) * __a;
+            __y = my_copysign(_Tp(INFINITY), __c) * __b;
         }
         else if ((std::isinf(__a) || std::isinf(__b)) && std::isfinite(__c) && std::isfinite(__d))
         {
-            __a = std::copysign(std::isinf(__a) ? _Tp(1) : _Tp(0), __a);
-            __b = std::copysign(std::isinf(__b) ? _Tp(1) : _Tp(0), __b);
+            __a = my_copysign(std::isinf(__a) ? _Tp(1) : _Tp(0), __a);
+            __b = my_copysign(std::isinf(__b) ? _Tp(1) : _Tp(0), __b);
             __x = _Tp(INFINITY) * (__a * __c + __b * __d);
             __y = _Tp(INFINITY) * (__b * __c - __a * __d);
         }
         else if (std::isinf(__logbw) && __logbw > _Tp(0) && std::isfinite(__a) && std::isfinite(__b))
         {
-            __c = std::copysign(std::isinf(__c) ? _Tp(1) : _Tp(0), __c);
-            __d = std::copysign(std::isinf(__d) ? _Tp(1) : _Tp(0), __d);
+            __c = my_copysign(std::isinf(__c) ? _Tp(1) : _Tp(0), __c);
+            __d = my_copysign(std::isinf(__d) ? _Tp(1) : _Tp(0), __d);
             __x = _Tp(0) * (__a * __c + __b * __d);
             __y = _Tp(0) * (__b * __c - __a * __d);
         }
@@ -473,12 +507,12 @@ float imag(float __re)
 }
 
 // abs
-
+// Here we replace std::hypot with our wrapper my_hypot.
 template<class _Tp>
 inline CUDA_CALLABLE_MEMBER
 _Tp abs(const complex<_Tp>& __c)
 {
-    return std::hypot(__c.real(), __c.imag());
+    return my_hypot(__c.real(), __c.imag());
 }
 
 // arg
@@ -556,7 +590,7 @@ complex<_Tp> proj(const complex<_Tp>& __c)
 {
     complex<_Tp> __r = __c;
     if (std::isinf(__c.real()) || std::isinf(__c.imag()))
-        __r = complex<_Tp>(std::numeric_limits<_Tp>::infinity(), std::copysign(_Tp(0), __c.imag()));
+        __r = complex<_Tp>(std::numeric_limits<_Tp>::infinity(), my_copysign(_Tp(0), __c.imag()));
     return __r;
 }
 
@@ -634,8 +668,8 @@ complex<_Tp> sqrt(const complex<_Tp>& __x)
     if (std::isinf(__x.real()))
     {
         if (__x.real() > _Tp(0))
-            return complex<_Tp>(__x.real(), std::isnan(__x.imag()) ? __x.imag() : std::copysign(_Tp(0), __x.imag()));
-        return complex<_Tp>(std::isnan(__x.imag()) ? __x.imag() : _Tp(0), std::copysign(__x.real(), __x.imag()));
+            return complex<_Tp>(__x.real(), std::isnan(__x.imag()) ? __x.imag() : my_copysign(_Tp(0), __x.imag()));
+        return complex<_Tp>(std::isnan(__x.imag()) ? __x.imag() : _Tp(0), my_copysign(__x.real(), __x.imag()));
     }
     return polar(std::sqrt(abs(__x)), arg(__x) / _Tp(2));
 }
@@ -702,8 +736,8 @@ complex<_Tp> asinh(const complex<_Tp>& __x)
         if (std::isnan(__x.imag()))
             return __x;
         if (std::isinf(__x.imag()))
-            return complex<_Tp>(__x.real(), std::copysign(__pi * _Tp(0.25), __x.imag()));
-        return complex<_Tp>(__x.real(), std::copysign(_Tp(0), __x.imag()));
+            return complex<_Tp>(__x.real(), my_copysign(__pi * _Tp(0.25), __x.imag()));
+        return complex<_Tp>(__x.real(), my_copysign(_Tp(0), __x.imag()));
     }
     if (std::isnan(__x.real()))
     {
@@ -714,9 +748,9 @@ complex<_Tp> asinh(const complex<_Tp>& __x)
         return complex<_Tp>(__x.real(), __x.real());
     }
     if (std::isinf(__x.imag()))
-        return complex<_Tp>(std::copysign(__x.imag(), __x.real()), std::copysign(__pi/_Tp(2), __x.imag()));
+        return complex<_Tp>(my_copysign(__x.imag(), __x.real()), my_copysign(__pi/_Tp(2), __x.imag()));
     complex<_Tp> __z = log(__x + sqrt(pow(__x, _Tp(2)) + _Tp(1)));
-    return complex<_Tp>(std::copysign(__z.real(), __x.real()), std::copysign(__z.imag(), __x.imag()));
+    return complex<_Tp>(my_copysign(__z.real(), __x.real()), my_copysign(__z.imag(), __x.imag()));
 }
 
 // acosh
@@ -731,13 +765,15 @@ complex<_Tp> acosh(const complex<_Tp>& __x)
         if (std::isnan(__x.imag()))
             return complex<_Tp>(std::fabs(__x.real()), __x.imag());
         if (std::isinf(__x.imag()))
+        {
             if (__x.real() > 0)
-                return complex<_Tp>(__x.real(), std::copysign(__pi * _Tp(0.25), __x.imag()));
+                return complex<_Tp>(__x.real(), my_copysign(__pi * _Tp(0.25), __x.imag()));
             else
-                return complex<_Tp>(-__x.real(), std::copysign(__pi * _Tp(0.75), __x.imag()));
+                return complex<_Tp>(-__x.real(), my_copysign(__pi * _Tp(0.75), __x.imag()));
+        }
         if (__x.real() < 0)
-            return complex<_Tp>(-__x.real(), std::copysign(__pi, __x.imag()));
-        return complex<_Tp>(__x.real(), std::copysign(_Tp(0), __x.imag()));
+            return complex<_Tp>(-__x.real(), my_copysign(__pi, __x.imag()));
+        return complex<_Tp>(__x.real(), my_copysign(_Tp(0), __x.imag()));
     }
     if (std::isnan(__x.real()))
     {
@@ -746,9 +782,9 @@ complex<_Tp> acosh(const complex<_Tp>& __x)
         return complex<_Tp>(__x.real(), __x.real());
     }
     if (std::isinf(__x.imag()))
-        return complex<_Tp>(std::fabs(__x.imag()), std::copysign(__pi/_Tp(2), __x.imag()));
+        return complex<_Tp>(std::fabs(__x.imag()), my_copysign(__pi/_Tp(2), __x.imag()));
     complex<_Tp> __z = log(__x + sqrt(pow(__x, _Tp(2)) - _Tp(1)));
-    return complex<_Tp>(std::copysign(__z.real(), _Tp(0)), std::copysign(__z.imag(), __x.imag()));
+    return complex<_Tp>(my_copysign(__z.real(), _Tp(0)), my_copysign(__z.imag(), __x.imag()));
 }
 
 // atanh
@@ -760,12 +796,12 @@ complex<_Tp> atanh(const complex<_Tp>& __x)
     const _Tp __pi(std::atan2(+0., -0.));
     if (std::isinf(__x.imag()))
     {
-        return complex<_Tp>(std::copysign(_Tp(0), __x.real()), std::copysign(__pi/_Tp(2), __x.imag()));
+        return complex<_Tp>(my_copysign(_Tp(0), __x.real()), my_copysign(__pi/_Tp(2), __x.imag()));
     }
     if (std::isnan(__x.imag()))
     {
         if (std::isinf(__x.real()) || __x.real() == 0)
-            return complex<_Tp>(std::copysign(_Tp(0), __x.real()), __x.imag());
+            return complex<_Tp>(my_copysign(_Tp(0), __x.real()), __x.imag());
         return complex<_Tp>(__x.imag(), __x.imag());
     }
     if (std::isnan(__x.real()))
@@ -774,14 +810,14 @@ complex<_Tp> atanh(const complex<_Tp>& __x)
     }
     if (std::isinf(__x.real()))
     {
-        return complex<_Tp>(std::copysign(_Tp(0), __x.real()), std::copysign(__pi/_Tp(2), __x.imag()));
+        return complex<_Tp>(my_copysign(_Tp(0), __x.real()), my_copysign(__pi/_Tp(2), __x.imag()));
     }
     if (std::fabs(__x.real()) == _Tp(1) && __x.imag() == _Tp(0))
     {
-        return complex<_Tp>(std::copysign(_Tp(INFINITY), __x.real()), std::copysign(_Tp(0), __x.imag()));
+        return complex<_Tp>(my_copysign(_Tp(INFINITY), __x.real()), my_copysign(_Tp(0), __x.imag()));
     }
     complex<_Tp> __z = log((_Tp(1) + __x) / (_Tp(1) - __x)) / _Tp(2);
-    return complex<_Tp>(std::copysign(__z.real(), __x.real()), std::copysign(__z.imag(), __x.imag()));
+    return complex<_Tp>(my_copysign(__z.real(), __x.real()), my_copysign(__z.imag(), __x.imag()));
 }
 
 // sinh
@@ -828,7 +864,7 @@ complex<_Tp> tanh(const complex<_Tp>& __x)
     {
         if (!std::isfinite(__x.imag()))
             return complex<_Tp>(_Tp(1), _Tp(0));
-        return complex<_Tp>(_Tp(1), std::copysign(_Tp(0), std::sin(_Tp(2) * __x.imag())));
+        return complex<_Tp>(_Tp(1), my_copysign(_Tp(0), std::sin(_Tp(2) * __x.imag())));
     }
     if (std::isnan(__x.real()) && __x.imag() == 0)
         return __x;
